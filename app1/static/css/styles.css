@@ -1,0 +1,23 @@
+/* *{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+} */
+
+div{
+    font-weight: 500;
+    font-size: 60px;
+    color: white;
+    text-decoration: aliceblue;
+    text-align: center;
+    background-color: black;
+}
+.main_box{
+    background-color: white;
+    min-height: 250px;
+    max-width: 300px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap:10px;
+}

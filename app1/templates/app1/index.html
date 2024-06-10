@@ -1,0 +1,264 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    
+    <title>Tic-Tac-Toe</title>
+</head>
+<body>
+    <h2 id="assigned_character" style="display: none;"></h2>
+    <h1 id="winner" style="display: none;"></h1>
+    <h3 class="if_not_enough_players" style="display: none;">Waiting for another player to join...</h3>
+    <h3 class="playerTurn" style="display: none;">Make your Move!</h3>
+    <h3 class="playerWait" style="display: none;">Waiting for opponent's move...</h3>
+    <div class="main_box">
+        <div id="0"></div>
+        <div id="1"></div>
+        <div id="2"></div>
+        <div id="3"></div>
+        <div id="4"></div>
+        <div id="5"></div>
+        <div id="6"></div>
+        <div id="7"></div>
+        <div id="8"></div>
+    </div>
+</body>
+<script>
+    var isPlayersEnough = false
+    var data;
+    var playerTurn = false;
+    var playerInput = null;
+    var group_name;
+    var winner = null;
+    var ws = new WebSocket('ws://127.0.0.1:8000/ws/sc/')
+    ws.onopen = function(event){
+        console.log('websocket open...',event);
+    }
+
+    ws.onmessage = function(event){
+        data = event
+        console.log(event);
+        if(!isPlayersEnough && typeof(JSON.parse(data['data']))!="string"){
+            let t  = JSON.parse(data['data'])
+            console.log('-----------------------------');
+            console.log(t);
+            if(!playerInput){
+                if(t.playerInput){
+                    playerInput = t.playerInput
+                    document.getElementById('assigned_character').innerText = `You are Player ${t.playerInput.toUpperCase()}`
+                    document.getElementById('assigned_character').style.display = 'block'
+                }
+            }
+            if (t.playerTurn){
+                // url = "http://127.0.0.1:8000/get-array"
+                // fetch(url,{
+                // method : 'POST',
+                // headers : {
+                //     'Content-Type': 'application/json',
+                // },
+                // body : JSON.stringify({
+                //     "group_name" : group_name,
+                //     "index" : Number(event.target.className),
+                //     "playerInput" : playerInput
+                // })
+                // })
+                // .then(response => {
+                //     // Check if the request was successful
+                //     if (!response.ok) {
+                //     throw new Error('Network response was not ok ' + response.statusText);
+                //     }
+                //     // Parse the JSON from the response
+                //     return response.json();
+                // })
+                // .then(data => {
+                //     // Handle the data from the response
+                //     console.log(data);
+                // })
+                // .catch(error => {
+                //     // Handle any errors that occurred during the fetch
+                //     console.error('There has been a problem with your fetch operation:', error);
+                // });
+                playerTurn = true
+                document.querySelector(".playerWait").style.display = "none"
+                document.querySelector(".playerTurn").style.display = "block"
+            }
+            else if(t.playerTurn != undefined && t.playerTurn === false){
+                playerTurn = false
+                document.querySelector(".playerTurn").style.display = "none"
+                document.querySelector(".playerWait").style.display = "block"
+            }
+            isPlayersEnough = t.enoughPlayers
+            if(isPlayersEnough){
+                document.querySelector('.if_not_enough_players').style.display = 'none'
+                // document.querySelector('.main_box').style.display = 'block'
+            }
+            console.log("Are Players Enough? : ",isPlayersEnough);
+        }
+        else{
+            console.log('inside else block');
+            let t  = JSON.parse(data['data'])
+            console.log(t);
+            if (t.playerTurn){
+                console.log(t.update_index);
+                if(t.update_index != undefined){
+                    console.log('inside update block');
+                    document.getElementById(t.update_index).innerText = playerInput === 'x'? 'o' : 'x'
+                }
+                playerTurn = true
+                document.querySelector(".playerWait").style.display = "none"
+                document.querySelector(".playerTurn").style.display = "block"
+            }
+            else if(t.playerTurn != undefined && t.playerTurn === false){
+                playerTurn = false
+                document.querySelector(".playerTurn").style.display = "none"
+                document.querySelector(".playerWait").style.display = "block"
+            }
+            else if(t.winner_player){
+                document.querySelector('.main_box').style.display = "none"
+                document.querySelector('.playerTurn').style.display = "none"
+                document.querySelector('.playerWait').style.display = "none"
+                if(t.winner_player === "draw"){
+                    document.getElementById('winner').innerText = `Match Ended In a Draw!!`
+                }
+                else if(t.winner_player === playerInput){
+                    document.getElementById('winner').innerText = `You have Won the Game!! GG`
+                }
+                else{
+                    document.getElementById('winner').innerText = `Game Over..Better Luck Next Time!!`
+                }
+                
+                document.getElementById('winner').style.display = "block"
+            }
+            else{
+                group_name = t
+            }
+            
+        }
+        
+    
+        
+    }
+    ws.onclose = function(){
+        console.log('conn closed');
+    }
+    // document.querySelector('.playerTurn').style.display = 'none'
+    var main_box = document.querySelector('.main_box')
+    if(!isPlayersEnough){
+        document.querySelector('.if_not_enough_players').style.display = 'block'
+        // main_box.style.display = 'none'
+    }
+    main_box.onclick = function(event){
+        // Define the base URL of the resource
+        const baseUrl = 'http://127.0.0.1:8000/get-array';
+        const putUrl = 'http://127.0.0.1:8000/array-api'
+        if(playerTurn && event.target.innerText === ''){
+            console.log(playerInput);
+            console.log(Number(event.target.className));
+            console.log(event);
+            document.getElementById(event.target.id).innerText = playerInput
+            
+            fetch(putUrl,{
+                method : 'PUT',
+                headers : {
+                    'Content-Type': 'application/json',
+                },
+                body : JSON.stringify({
+                    "group_name" : group_name,
+                    "index" : Number(event.target.id),
+                    "playerInput" : playerInput
+                })
+            })
+            .then(response => {
+                // Check if the request was successful
+                if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+                }
+                // Parse the JSON from the response
+                return response.json();
+            })
+            .then(data => {
+                // Handle the data from the response
+                console.log(data);
+            })
+            .catch(error => {
+                // Handle any errors that occurred during the fetch
+                console.error('There has been a problem with your fetch operation:', error);
+            });
+
+            playerTurn = false;
+            // to signal the server that player has made his move 
+            ws.send(JSON.stringify({
+                'player' : playerInput,
+                'group_name' : group_name,
+                'update_index' : Number(event.target.id)
+            }))
+            document.querySelector('.playerTurn').style.display = "none";
+            document.querySelector('.playerWait').style.display = "block";
+
+
+
+            
+
+            // fetch(baseUrl,{
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //     },
+            //     body : JSON.stringify({
+            //         'group_name': group_name
+            //     })
+            // })
+            // .then(response => {
+            //     // Check if the request was successful
+            //     if (!response.ok) {
+            //     throw new Error('Network response was not ok ' + response.statusText);
+            //     }
+            //     // Parse the JSON from the response
+            //     return response.json();
+            // })
+            // .then(data => {
+            //     // Handle the data from the response
+            //     console.log(data.data);
+            //     let t = data.data
+            //     fetch(putUrl,{
+            //         method : 'PUT',
+            //         headers : {
+            //             'Content-Type': 'application/json',
+            //         },
+            //         body : JSON.stringify({
+            //             "group_name" : group_name,
+            //             "index" : Number(event.target.className),
+            //             "playerInput" : playerInput
+            //         })
+            //     })
+            //     .then(response => {
+            //         // Check if the request was successful
+            //         if (!response.ok) {
+            //         throw new Error('Network response was not ok ' + response.statusText);
+            //         }
+            //         // Parse the JSON from the response
+            //         return response.json();
+            //     })
+            //     .then(data => {
+            //         // Handle the data from the response
+            //         console.log(data);
+            //     })
+            //     .catch(error => {
+            //         // Handle any errors that occurred during the fetch
+            //         console.error('There has been a problem with your fetch operation:', error);
+            //     });
+                
+            // })
+            // .catch(error => {
+            //     // Handle any errors that occurred during the fetch
+            //     console.error('There has been a problem with your fetch operation:', error);
+            // });
+        }
+        
+    }
+        
+        </script>
+</html>
